@@ -1,45 +1,31 @@
-from flask import Flask, request, jsonify
+# app.py
+
+import os
+from flask import Flask, jsonify
+from flask_cors import CORS
+from Services import MidtransService, GraphhopperService
 
 app = Flask(__name__)
+CORS(app)
+api_key = os.getenv("GRAPHHOPPER_API_KEY")
+midtrans_server_key = os.getenv("MIDTRANS_SERVER_KEY")
 
-# Fake in-memory database
-users_db = {
-    "user1": {
-        'username': 'Coba',
-        'password': 'cobapassword'
-    }
-}
+midtrans_service = MidtransService(midtrans_server_key)
+graphhopper_service = GraphhopperService(api_key)
 
-@app.route('/users', methods=['GET'])
-def get_users():
-    sanitized_users = {user_id: {'username': user['username']} for user_id, user in users_db.items()}
-    return jsonify(sanitized_users)
+@app.route('/create_transaction', methods=['POST'])
+def create_transaction():
+    order_id = "order-id-928301928391"
+    amount = 10000
+    response_data, status_code = midtrans_service.create_transaction(order_id, amount)
+    return jsonify(response_data), status_code
 
-@app.route('/register', methods=['POST'])
-def register_user():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
 
-    if email in users_db:
-        return jsonify(message='User already exists'), 400
-
-    users_db[email] = {'email': email, 'password': password}
-    print(users_db)
-    return jsonify(message='User registered successfully')
-
-@app.route('/login', methods=['POST'])
-def login_user():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-
-    user = users_db.get(email)
-
-    if not user or user['password'] != password:
-        return jsonify(message='Invalid credentials'), 401
-
-    return jsonify(message=f'{email} logged in successfully')
+@app.route('/shipping-cost', methods=['GET'])
+def get_shipping_cost():
+    points = "example_points"
+    response_data = graphhopper_service.get_shipping_cost(points)
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
